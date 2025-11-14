@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ToneGen &mdash; Multi-Tone Generator</title>
+    <title>Evolution &mdash; Multi-Tone Generator</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <main class="app">
         <header class="app__header">
-            <h1>Multi-Tone Generator</h1>
+            <h1>Evolution Multi-Tone Generator</h1>
             <p>Create a sequence of tones, audition them in your browser, and export the result as a WAV file.</p>
         </header>
 
@@ -20,17 +20,49 @@
 
         <section class="effects" aria-label="Audio effects">
             <h2>Effects</h2>
-            <div class="effect-row">
-                <label class="effect-toggle">
-                    <input type="checkbox" id="reverbToggle" checked>
-                    Enable Reverb
-                </label>
-                <label class="effect-control" for="reverbMix">
-                    Reverb Mix
-                    <span class="effect-value" id="reverbMixValue">35%</span>
-                    <input type="range" id="reverbMix" min="0" max="100" value="35" />
-                </label>
-            </div>
+            <article class="effect-card" data-effect="reverb">
+                <header class="effect-card__header">
+                    <h3>Reverb</h3>
+                    <label class="effect-toggle" for="reverbToggle">
+                        <input type="checkbox" id="reverbToggle" checked>
+                        Enable
+                    </label>
+                </header>
+                <div class="effect-card__body">
+                    <label class="effect-control" for="reverbMix">
+                        Mix
+                        <span class="effect-value" id="reverbMixValue">35%</span>
+                        <input type="range" id="reverbMix" min="0" max="100" value="35" />
+                    </label>
+                </div>
+            </article>
+
+            <article class="effect-card" data-effect="delay">
+                <header class="effect-card__header">
+                    <h3>Delay</h3>
+                    <label class="effect-toggle" for="delayToggle">
+                        <input type="checkbox" id="delayToggle">
+                        Enable
+                    </label>
+                </header>
+                <div class="effect-card__body">
+                    <label class="effect-control" for="delayMix">
+                        Mix
+                        <span class="effect-value" id="delayMixValue">30%</span>
+                        <input type="range" id="delayMix" min="0" max="100" value="30" />
+                    </label>
+                    <label class="effect-control" for="delayTime">
+                        Time
+                        <span class="effect-value" id="delayTimeValue">250 ms</span>
+                        <input type="range" id="delayTime" min="50" max="1200" value="250" />
+                    </label>
+                    <label class="effect-control" for="delayFeedback">
+                        Feedback
+                        <span class="effect-value" id="delayFeedbackValue">35%</span>
+                        <input type="range" id="delayFeedback" min="0" max="90" value="35" />
+                    </label>
+                </div>
+            </article>
         </section>
 
         <section class="actions" aria-label="Playback and export">

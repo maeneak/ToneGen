@@ -8,6 +8,7 @@
     const MAX_TOTAL_DURATION_MS = 60000;
     const DEFAULT_TONE = { frequency: 440, waveform: 'sine', duration: 1000 };
     const REVERB_DEFAULTS = { enabled: true, mix: 0.35, duration: 2.5, decay: 2.5 };
+    const DELAY_DEFAULTS = { enabled: false, mix: 0.3, time: 0.25, feedback: 0.35, maxTime: 1.5 };
 
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
     const impulseResponseCache = new Map();
@@ -20,6 +21,13 @@
     const reverbToggle = document.getElementById('reverbToggle');
     const reverbMixInput = document.getElementById('reverbMix');
     const reverbMixValue = document.getElementById('reverbMixValue');
+    const delayToggle = document.getElementById('delayToggle');
+    const delayMixInput = document.getElementById('delayMix');
+    const delayMixValue = document.getElementById('delayMixValue');
+    const delayTimeInput = document.getElementById('delayTime');
+    const delayTimeValue = document.getElementById('delayTimeValue');
+    const delayFeedbackInput = document.getElementById('delayFeedback');
+    const delayFeedbackValue = document.getElementById('delayFeedbackValue');
 
     let activePlaybackContext = null;
 
@@ -34,6 +42,13 @@
             reverbToggle.addEventListener('change', updateReverbUI);
             reverbMixInput.addEventListener('input', updateReverbUI);
             updateReverbUI();
+        }
+        if (delayToggle && delayMixInput && delayTimeInput && delayFeedbackInput) {
+            delayToggle.addEventListener('change', updateDelayUI);
+            delayMixInput.addEventListener('input', updateDelayUI);
+            delayTimeInput.addEventListener('input', updateDelayUI);
+            delayFeedbackInput.addEventListener('input', updateDelayUI);
+            updateDelayUI();
         }
     }
 
@@ -220,20 +235,32 @@
     }
 
     function collectEffectSettings() {
-        if (!reverbToggle || !reverbMixInput) {
-            return { reverb: { enabled: false, mix: 0, duration: REVERB_DEFAULTS.duration, decay: REVERB_DEFAULTS.decay } };
-        }
+        const reverbEnabled = reverbToggle ? Boolean(reverbToggle.checked) : REVERB_DEFAULTS.enabled;
+        const reverbSlider = reverbMixInput ? Number(reverbMixInput.value) : Math.round(REVERB_DEFAULTS.mix * 100);
+        const reverbMix = reverbEnabled ? clamp(reverbSlider / 100, 0, 1) : 0;
 
-        const enabled = Boolean(reverbToggle.checked);
-        const rawMix = Number(reverbMixInput.value);
-        const mix = enabled ? clamp(rawMix / 100, 0, 1) : 0;
+        const delayEnabled = delayToggle ? Boolean(delayToggle.checked) : DELAY_DEFAULTS.enabled;
+        const delayMixSlider = delayMixInput ? Number(delayMixInput.value) : Math.round(DELAY_DEFAULTS.mix * 100);
+        const delayTimeSlider = delayTimeInput ? Number(delayTimeInput.value) : Math.round(DELAY_DEFAULTS.time * 1000);
+        const delayFeedbackSlider = delayFeedbackInput ? Number(delayFeedbackInput.value) : Math.round(DELAY_DEFAULTS.feedback * 100);
+
+        const delayMix = delayEnabled ? clamp(delayMixSlider / 100, 0, 1) : 0;
+        const delayTime = clamp(delayTimeSlider / 1000, 0.01, DELAY_DEFAULTS.maxTime);
+        const delayFeedback = delayEnabled ? clamp(delayFeedbackSlider / 100, 0, 0.95) : 0;
 
         return {
             reverb: {
-                enabled,
-                mix,
+                enabled: reverbEnabled,
+                mix: reverbMix,
                 duration: REVERB_DEFAULTS.duration,
                 decay: REVERB_DEFAULTS.decay
+            },
+            delay: {
+                enabled: delayEnabled,
+                mix: delayMix,
+                time: delayTime,
+                feedback: delayFeedback,
+                maxTime: DELAY_DEFAULTS.maxTime
             }
         };
     }
@@ -394,32 +421,78 @@
 
         const enabled = Boolean(reverbToggle.checked);
         reverbMixInput.disabled = !enabled;
-        const displayValue = enabled ? `${reverbMixInput.value}%` : 'Off';
-        reverbMixValue.textContent = displayValue;
+        reverbMixValue.textContent = enabled ? `${reverbMixInput.value}%` : 'Off';
+    }
+
+    function updateDelayUI() {
+        if (!delayToggle || !delayMixInput || !delayTimeInput || !delayFeedbackInput || !delayMixValue || !delayTimeValue || !delayFeedbackValue) {
+            return;
+        }
+
+        const enabled = Boolean(delayToggle.checked);
+        delayMixInput.disabled = !enabled;
+        delayTimeInput.disabled = !enabled;
+        delayFeedbackInput.disabled = !enabled;
+
+        delayMixValue.textContent = enabled ? `${delayMixInput.value}%` : 'Off';
+        delayTimeValue.textContent = enabled ? `${delayTimeInput.value} ms` : 'Off';
+        delayFeedbackValue.textContent = enabled ? `${delayFeedbackInput.value}%` : 'Off';
     }
 
     function applyEffectsChain(context, sourceNode, destinationNode, effects, timeOrigin) {
-        if (!effects || !effects.reverb || !effects.reverb.enabled || effects.reverb.mix <= 0) {
-            sourceNode.connect(destinationNode);
-            return true;
-        }
+        const reverbSettings = effects?.reverb ?? {};
+        const delaySettings = effects?.delay ?? {};
 
-        const mix = clamp(effects.reverb.mix, 0, 1);
+        const reverbEnabled = Boolean(reverbSettings.enabled) && reverbSettings.mix > 0;
+        const delayEnabled = Boolean(delaySettings.enabled) && delaySettings.mix > 0;
+
+        const reverbMix = reverbEnabled ? clamp(reverbSettings.mix, 0, 1) : 0;
+        const delayMix = delayEnabled ? clamp(delaySettings.mix, 0, 1) : 0;
+
         const dryGain = context.createGain();
-        const wetGain = context.createGain();
-        const convolver = context.createConvolver();
-        const impulse = getImpulseResponse(context, effects.reverb);
-
-        dryGain.gain.setValueAtTime(1 - mix, timeOrigin);
-        wetGain.gain.setValueAtTime(mix, timeOrigin);
-        convolver.buffer = impulse;
+        if (reverbMix > 0 || delayMix > 0) {
+            const combined = Math.min(0.9, reverbMix + delayMix * 0.6);
+            const dryLevel = clamp(1 - combined, 0.05, 1);
+            dryGain.gain.setValueAtTime(dryLevel, timeOrigin);
+        } else {
+            dryGain.gain.setValueAtTime(1, timeOrigin);
+        }
 
         sourceNode.connect(dryGain);
         dryGain.connect(destinationNode);
 
-        sourceNode.connect(convolver);
-        convolver.connect(wetGain);
-        wetGain.connect(destinationNode);
+        if (delayMix > 0) {
+            const maxDelayTime = clamp(delaySettings.maxTime || DELAY_DEFAULTS.maxTime, 0.1, 5);
+            const delayNode = context.createDelay(maxDelayTime);
+            const delayTime = clamp(delaySettings.time || DELAY_DEFAULTS.time, 0.01, maxDelayTime);
+            const feedbackAmount = clamp(delaySettings.feedback ?? DELAY_DEFAULTS.feedback, 0, 0.95);
+
+            delayNode.delayTime.setValueAtTime(delayTime, timeOrigin);
+
+            const feedbackGain = context.createGain();
+            feedbackGain.gain.setValueAtTime(feedbackAmount, timeOrigin);
+
+            const delayWet = context.createGain();
+            delayWet.gain.setValueAtTime(delayMix, timeOrigin);
+
+            sourceNode.connect(delayNode);
+            delayNode.connect(delayWet);
+            delayWet.connect(destinationNode);
+
+            delayNode.connect(feedbackGain);
+            feedbackGain.connect(delayNode);
+        }
+
+        if (reverbMix > 0) {
+            const convolver = context.createConvolver();
+            convolver.buffer = getImpulseResponse(context, reverbSettings);
+            const reverbWet = context.createGain();
+            reverbWet.gain.setValueAtTime(reverbMix, timeOrigin);
+
+            sourceNode.connect(convolver);
+            convolver.connect(reverbWet);
+            reverbWet.connect(destinationNode);
+        }
 
         return true;
     }
