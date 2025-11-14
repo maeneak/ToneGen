@@ -6,7 +6,8 @@ ToneGen is a browser-based multi-tone generator built with the Web Audio API. Yo
 
 - Configure frequency, waveform, and duration for each tone in the sequence
 - Real-time playback with smoothing envelopes to avoid audible clicks
-- Optional effects: convolution reverb with adjustable mix and tempo-agnostic delay with mix/time/feedback controls
+- Global ADSR envelope controls (attack, decay, sustain, release) for smoother tone articulation
+- Optional effects: tone-shaping filter (type, cutoff, resonance), convolution reverb with adjustable mix, and tempo-agnostic delay with mix/time/feedback controls
 - Offline rendering to a WAV file that matches the live preview
 - Input validation and helpful status messaging to guide the user
 
@@ -31,6 +32,8 @@ ToneGen is a browser-based multi-tone generator built with the Web Audio API. Yo
 
 - Use the **Add Tone** button to append new rows; the app keeps at least one tone available.
 - The cumulative tone duration is limited to 60 seconds. Trim individual durations if you hit the limit.
+- Shape the overall contour in the **Envelope** card; longer releases can introduce overlap if the sequence has back-to-back tones.
+- Enable the **Filter** card to choose low-pass, high-pass, or band-pass responses and tune cutoff/resonance for the whole sequence.
 - Toggle effects in the **Effects** panel; disabled controls display `Off` and do not colour the sound.
 - After hitting **Download WAV**, your browser saves a `tone-sequence.wav` file with the applied effects.
 

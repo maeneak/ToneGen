@@ -7,6 +7,32 @@
     const MAX_DURATION_MS = 15000;
     const MAX_TOTAL_DURATION_MS = 60000;
     const DEFAULT_TONE = { frequency: 440, waveform: 'sine', duration: 1000 };
+    const ENVELOPE_DEFAULTS = {
+        enabled: true,
+        attack: 0.02,
+        minAttack: 0,
+        maxAttack: 2,
+        decay: 0.12,
+        minDecay: 0,
+        maxDecay: 2,
+        sustain: 0.75,
+        minSustain: 0,
+        maxSustain: 1,
+        release: 0.2,
+        minRelease: 0,
+        maxRelease: 4
+    };
+    const FILTER_TYPES = ['lowpass', 'highpass', 'bandpass'];
+    const FILTER_DEFAULTS = {
+        enabled: false,
+        type: 'lowpass',
+        frequency: 2000,
+        minFrequency: 60,
+        maxFrequency: 12000,
+        q: 1,
+        minQ: 0.1,
+        maxQ: 18
+    };
     const REVERB_DEFAULTS = { enabled: true, mix: 0.35, duration: 2.5, decay: 2.5 };
     const DELAY_DEFAULTS = { enabled: false, mix: 0.3, time: 0.25, feedback: 0.35, maxTime: 1.5 };
 
@@ -18,6 +44,21 @@
     const playButton = document.getElementById('playButton');
     const downloadButton = document.getElementById('downloadButton');
     const statusMessage = document.getElementById('statusMessage');
+    const envelopeToggle = document.getElementById('envelopeToggle');
+    const envelopeAttackInput = document.getElementById('envelopeAttack');
+    const envelopeAttackValue = document.getElementById('envelopeAttackValue');
+    const envelopeDecayInput = document.getElementById('envelopeDecay');
+    const envelopeDecayValue = document.getElementById('envelopeDecayValue');
+    const envelopeSustainInput = document.getElementById('envelopeSustain');
+    const envelopeSustainValue = document.getElementById('envelopeSustainValue');
+    const envelopeReleaseInput = document.getElementById('envelopeRelease');
+    const envelopeReleaseValue = document.getElementById('envelopeReleaseValue');
+    const filterToggle = document.getElementById('filterToggle');
+    const filterTypeSelect = document.getElementById('filterType');
+    const filterFrequencyInput = document.getElementById('filterFrequency');
+    const filterFrequencyValue = document.getElementById('filterFrequencyValue');
+    const filterQInput = document.getElementById('filterQ');
+    const filterQValue = document.getElementById('filterQValue');
     const reverbToggle = document.getElementById('reverbToggle');
     const reverbMixInput = document.getElementById('reverbMix');
     const reverbMixValue = document.getElementById('reverbMixValue');
@@ -38,6 +79,21 @@
         addToneBtn.addEventListener('click', handleAddTone);
         playButton.addEventListener('click', handlePlay);
         downloadButton.addEventListener('click', handleDownload);
+        if (envelopeToggle && envelopeAttackInput && envelopeDecayInput && envelopeSustainInput && envelopeReleaseInput) {
+            envelopeToggle.addEventListener('change', updateEnvelopeUI);
+            envelopeAttackInput.addEventListener('input', updateEnvelopeUI);
+            envelopeDecayInput.addEventListener('input', updateEnvelopeUI);
+            envelopeSustainInput.addEventListener('input', updateEnvelopeUI);
+            envelopeReleaseInput.addEventListener('input', updateEnvelopeUI);
+            updateEnvelopeUI();
+        }
+        if (filterToggle && filterTypeSelect && filterFrequencyInput && filterQInput) {
+            filterToggle.addEventListener('change', updateFilterUI);
+            filterTypeSelect.addEventListener('change', updateFilterUI);
+            filterFrequencyInput.addEventListener('input', updateFilterUI);
+            filterQInput.addEventListener('input', updateFilterUI);
+            updateFilterUI();
+        }
         if (reverbToggle && reverbMixInput) {
             reverbToggle.addEventListener('change', updateReverbUI);
             reverbMixInput.addEventListener('input', updateReverbUI);
@@ -106,15 +162,11 @@
             const gain = context.createGain();
             const start = cursor;
             const stop = start + durationSeconds;
-            const ramp = Math.min(0.02, durationSeconds / 4);
 
             oscillator.type = tone.waveform;
             oscillator.frequency.setValueAtTime(tone.frequency, start);
 
-            gain.gain.setValueAtTime(0, start);
-            gain.gain.linearRampToValueAtTime(0.2, start + ramp);
-            gain.gain.setValueAtTime(0.2, stop - ramp);
-            gain.gain.linearRampToValueAtTime(0, stop);
+            applyAmplitudeEnvelope(gain, start, stop, effects.envelope);
 
             oscillator.connect(gain).connect(masterGain);
             oscillator.start(start);
@@ -235,6 +287,26 @@
     }
 
     function collectEffectSettings() {
+        const envelopeEnabled = envelopeToggle ? Boolean(envelopeToggle.checked) : ENVELOPE_DEFAULTS.enabled;
+        const envelopeAttackMs = envelopeAttackInput ? Number(envelopeAttackInput.value) : ENVELOPE_DEFAULTS.attack * 1000;
+        const envelopeDecayMs = envelopeDecayInput ? Number(envelopeDecayInput.value) : ENVELOPE_DEFAULTS.decay * 1000;
+        const envelopeSustainRaw = envelopeSustainInput ? Number(envelopeSustainInput.value) : ENVELOPE_DEFAULTS.sustain * 100;
+        const envelopeReleaseMs = envelopeReleaseInput ? Number(envelopeReleaseInput.value) : ENVELOPE_DEFAULTS.release * 1000;
+
+        const envelopeAttack = clamp(envelopeAttackMs / 1000, ENVELOPE_DEFAULTS.minAttack, ENVELOPE_DEFAULTS.maxAttack);
+        const envelopeDecay = clamp(envelopeDecayMs / 1000, ENVELOPE_DEFAULTS.minDecay, ENVELOPE_DEFAULTS.maxDecay);
+        const envelopeSustain = clamp(envelopeSustainRaw / 100, ENVELOPE_DEFAULTS.minSustain, ENVELOPE_DEFAULTS.maxSustain);
+        const envelopeRelease = clamp(envelopeReleaseMs / 1000, ENVELOPE_DEFAULTS.minRelease, ENVELOPE_DEFAULTS.maxRelease);
+
+        const filterEnabled = filterToggle ? Boolean(filterToggle.checked) : FILTER_DEFAULTS.enabled;
+        const filterTypeRaw = filterTypeSelect ? filterTypeSelect.value : FILTER_DEFAULTS.type;
+        const filterFrequencyRaw = filterFrequencyInput ? Number(filterFrequencyInput.value) : FILTER_DEFAULTS.frequency;
+        const filterQRaw = filterQInput ? Number(filterQInput.value) : FILTER_DEFAULTS.q;
+
+        const filterType = FILTER_TYPES.includes(filterTypeRaw) ? filterTypeRaw : FILTER_DEFAULTS.type;
+        const filterFrequency = clamp(filterFrequencyRaw, FILTER_DEFAULTS.minFrequency, FILTER_DEFAULTS.maxFrequency);
+        const filterQ = clamp(filterQRaw, FILTER_DEFAULTS.minQ, FILTER_DEFAULTS.maxQ);
+
         const reverbEnabled = reverbToggle ? Boolean(reverbToggle.checked) : REVERB_DEFAULTS.enabled;
         const reverbSlider = reverbMixInput ? Number(reverbMixInput.value) : Math.round(REVERB_DEFAULTS.mix * 100);
         const reverbMix = reverbEnabled ? clamp(reverbSlider / 100, 0, 1) : 0;
@@ -249,6 +321,19 @@
         const delayFeedback = delayEnabled ? clamp(delayFeedbackSlider / 100, 0, 0.95) : 0;
 
         return {
+            envelope: {
+                enabled: envelopeEnabled,
+                attack: envelopeAttack,
+                decay: envelopeDecay,
+                sustain: envelopeSustain,
+                release: envelopeRelease
+            },
+            filter: {
+                enabled: filterEnabled,
+                type: filterType,
+                frequency: filterFrequency,
+                q: filterQ
+            },
             reverb: {
                 enabled: reverbEnabled,
                 mix: reverbMix,
@@ -350,15 +435,11 @@
             const durationSeconds = tone.duration / 1000;
             const start = cursor;
             const stop = start + durationSeconds;
-            const ramp = Math.min(0.02, durationSeconds / 4);
 
             oscillator.type = tone.waveform;
             oscillator.frequency.setValueAtTime(tone.frequency, start);
 
-            gain.gain.setValueAtTime(0, start);
-            gain.gain.linearRampToValueAtTime(0.25, start + ramp);
-            gain.gain.setValueAtTime(0.25, stop - ramp);
-            gain.gain.linearRampToValueAtTime(0, stop);
+            applyAmplitudeEnvelope(gain, start, stop, effects.envelope);
 
             oscillator.connect(gain).connect(masterGain);
             oscillator.start(start);
@@ -414,6 +495,84 @@
         }
     }
 
+    function formatMilliseconds(value) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+            return '';
+        }
+
+        if (numeric >= 1000) {
+            const seconds = numeric / 1000;
+            const precision = seconds >= 2 ? 1 : 2;
+            return `${seconds.toFixed(precision)} s`;
+        }
+
+        return `${Math.round(numeric)} ms`;
+    }
+
+    function formatPercent(value) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+            return '';
+        }
+
+        return `${numeric.toFixed(0)}%`;
+    }
+
+    function formatFrequency(value) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+            return '';
+        }
+
+        if (numeric >= 1000) {
+            const precision = numeric >= 10000 ? 1 : 2;
+            return `${(numeric / 1000).toFixed(precision)} kHz`;
+        }
+
+        return `${Math.round(numeric)} Hz`;
+    }
+
+    function formatQ(value) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+            return '';
+        }
+
+        return numeric.toFixed(1);
+    }
+
+    function updateEnvelopeUI() {
+        if (!envelopeToggle || !envelopeAttackInput || !envelopeDecayInput || !envelopeSustainInput || !envelopeReleaseInput || !envelopeAttackValue || !envelopeDecayValue || !envelopeSustainValue || !envelopeReleaseValue) {
+            return;
+        }
+
+        const enabled = Boolean(envelopeToggle.checked);
+        envelopeAttackInput.disabled = !enabled;
+        envelopeDecayInput.disabled = !enabled;
+        envelopeSustainInput.disabled = !enabled;
+        envelopeReleaseInput.disabled = !enabled;
+
+        envelopeAttackValue.textContent = enabled ? formatMilliseconds(envelopeAttackInput.value) : 'Off';
+        envelopeDecayValue.textContent = enabled ? formatMilliseconds(envelopeDecayInput.value) : 'Off';
+        envelopeSustainValue.textContent = enabled ? formatPercent(envelopeSustainInput.value) : 'Off';
+        envelopeReleaseValue.textContent = enabled ? formatMilliseconds(envelopeReleaseInput.value) : 'Off';
+    }
+
+    function updateFilterUI() {
+        if (!filterToggle || !filterTypeSelect || !filterFrequencyInput || !filterFrequencyValue || !filterQInput || !filterQValue) {
+            return;
+        }
+
+        const enabled = Boolean(filterToggle.checked);
+        filterTypeSelect.disabled = !enabled;
+        filterFrequencyInput.disabled = !enabled;
+        filterQInput.disabled = !enabled;
+
+        filterFrequencyValue.textContent = enabled ? formatFrequency(filterFrequencyInput.value) : 'Off';
+        filterQValue.textContent = enabled ? formatQ(filterQInput.value) : 'Off';
+    }
+
     function updateReverbUI() {
         if (!reverbToggle || !reverbMixInput || !reverbMixValue) {
             return;
@@ -439,9 +598,81 @@
         delayFeedbackValue.textContent = enabled ? `${delayFeedbackInput.value}%` : 'Off';
     }
 
+    function applyAmplitudeEnvelope(gainNode, startTime, stopTime, envelope) {
+        const duration = Math.max(0, stopTime - startTime);
+        const gainParam = gainNode.gain;
+        gainParam.cancelScheduledValues(startTime);
+        gainParam.setValueAtTime(0, startTime);
+
+        if (!envelope || !envelope.enabled || duration === 0) {
+            const ramp = Math.max(Math.min(0.02, duration / 4 || 0.005), 0.0025);
+            const sustainEnd = Math.max(startTime, stopTime - ramp);
+            gainParam.linearRampToValueAtTime(1, startTime + ramp);
+            gainParam.setValueAtTime(1, sustainEnd);
+            gainParam.linearRampToValueAtTime(0, stopTime);
+            return;
+        }
+
+        const attack = clamp(envelope.attack ?? ENVELOPE_DEFAULTS.attack, ENVELOPE_DEFAULTS.minAttack, ENVELOPE_DEFAULTS.maxAttack);
+        const decay = clamp(envelope.decay ?? ENVELOPE_DEFAULTS.decay, ENVELOPE_DEFAULTS.minDecay, ENVELOPE_DEFAULTS.maxDecay);
+        const sustainLevel = clamp(envelope.sustain ?? ENVELOPE_DEFAULTS.sustain, ENVELOPE_DEFAULTS.minSustain, ENVELOPE_DEFAULTS.maxSustain);
+        const release = clamp(envelope.release ?? ENVELOPE_DEFAULTS.release, ENVELOPE_DEFAULTS.minRelease, ENVELOPE_DEFAULTS.maxRelease);
+
+        const releaseTime = Math.min(release, duration);
+        let remaining = Math.max(0, duration - releaseTime);
+
+        const attackTime = Math.min(attack, remaining);
+        remaining -= attackTime;
+
+        const decayTime = Math.min(decay, remaining);
+        remaining -= decayTime;
+
+        const sustainTime = Math.max(0, remaining);
+
+        const attackEnd = startTime + attackTime;
+        const decayEnd = attackEnd + decayTime;
+        const releaseStart = decayEnd + sustainTime;
+
+        if (attackTime > 0) {
+            gainParam.linearRampToValueAtTime(1, attackEnd);
+        } else {
+            gainParam.setValueAtTime(1, startTime);
+        }
+
+        if (decayTime > 0) {
+            gainParam.linearRampToValueAtTime(sustainLevel, decayEnd);
+        } else {
+            gainParam.setValueAtTime(sustainLevel, attackEnd);
+        }
+
+        gainParam.setValueAtTime(sustainLevel, releaseStart);
+
+        if (releaseTime > 0) {
+            gainParam.linearRampToValueAtTime(0, stopTime);
+        } else {
+            gainParam.setValueAtTime(0, stopTime);
+        }
+    }
+
     function applyEffectsChain(context, sourceNode, destinationNode, effects, timeOrigin) {
+        const filterSettings = effects?.filter ?? {};
         const reverbSettings = effects?.reverb ?? {};
         const delaySettings = effects?.delay ?? {};
+
+        let branchSource = sourceNode;
+        if (Boolean(filterSettings.enabled)) {
+            const filterType = FILTER_TYPES.includes(filterSettings.type) ? filterSettings.type : FILTER_DEFAULTS.type;
+            const filterFrequency = clamp(filterSettings.frequency ?? FILTER_DEFAULTS.frequency, FILTER_DEFAULTS.minFrequency, FILTER_DEFAULTS.maxFrequency);
+            const filterQ = clamp(filterSettings.q ?? FILTER_DEFAULTS.q, FILTER_DEFAULTS.minQ, FILTER_DEFAULTS.maxQ);
+
+            const filter = context.createBiquadFilter();
+            filter.type = filterType;
+            filter.frequency.setValueAtTime(filterFrequency, timeOrigin);
+            filter.Q.setValueAtTime(filterQ, timeOrigin);
+
+            sourceNode.connect(filter);
+            branchSource = filter;
+        }
 
         const reverbEnabled = Boolean(reverbSettings.enabled) && reverbSettings.mix > 0;
         const delayEnabled = Boolean(delaySettings.enabled) && delaySettings.mix > 0;
@@ -458,7 +689,7 @@
             dryGain.gain.setValueAtTime(1, timeOrigin);
         }
 
-        sourceNode.connect(dryGain);
+        branchSource.connect(dryGain);
         dryGain.connect(destinationNode);
 
         if (delayMix > 0) {
@@ -475,7 +706,7 @@
             const delayWet = context.createGain();
             delayWet.gain.setValueAtTime(delayMix, timeOrigin);
 
-            sourceNode.connect(delayNode);
+            branchSource.connect(delayNode);
             delayNode.connect(delayWet);
             delayWet.connect(destinationNode);
 
@@ -489,7 +720,7 @@
             const reverbWet = context.createGain();
             reverbWet.gain.setValueAtTime(reverbMix, timeOrigin);
 
-            sourceNode.connect(convolver);
+            branchSource.connect(convolver);
             convolver.connect(reverbWet);
             reverbWet.connect(destinationNode);
         }
