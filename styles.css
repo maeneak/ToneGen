@@ -1,0 +1,252 @@
+:root {
+    color-scheme: light dark;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    line-height: 1.5;
+    font-size: 16px;
+    background-color: #f7f7f7;
+    color: #1f1f1f;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f0f4ff, #fefefe);
+}
+
+.app {
+    width: min(720px, 92vw);
+    margin: 2rem auto;
+    padding: 2rem;
+    border-radius: 1.5rem;
+    background-color: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 18px 45px rgba(31, 41, 55, 0.15);
+}
+
+.app__header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.app__header h1 {
+    margin: 0 0 0.5rem;
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.effects {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    background-color: #eef2ff;
+    border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.effects h2 {
+    margin: 0 0 1rem;
+    font-size: 1.2rem;
+    color: #4338ca;
+}
+
+.effect-row {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    align-items: center;
+}
+
+.effect-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: #4c1d95;
+}
+
+.effect-control {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.95rem;
+    color: #312e81;
+}
+
+.effect-value {
+    font-size: 0.85rem;
+    color: #4338ca;
+}
+
+input[type="range"] {
+    width: 100%;
+    accent-color: #4f46e5;
+}
+
+input[type="range"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.tone-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.tone-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.75rem;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    background-color: #f3f6ff;
+    border: 1px solid #dde6ff;
+}
+
+.tone-row label {
+    font-size: 0.85rem;
+    color: #455899;
+}
+
+.tone-row input,
+.tone-row select {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid #c5cfe9;
+    font-size: 1rem;
+    background-color: #fff;
+    color: inherit;
+}
+
+.input--error {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2);
+}
+
+.tone-row button {
+    justify-self: end;
+}
+
+.actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin: 2rem 0 1.5rem;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 999px;
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: white;
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 20px rgba(79, 70, 229, 0.25);
+}
+
+.btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    box-shadow: none;
+}
+
+.btn--secondary {
+    background: transparent;
+    color: #4f46e5;
+    border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.btn--secondary:hover {
+    background: rgba(99, 102, 241, 0.1);
+    box-shadow: none;
+}
+
+.status {
+    text-align: center;
+    min-height: 1.5rem;
+    color: #374151;
+}
+
+.status--error {
+    color: #b91c1c;
+}
+
+.status--success {
+    color: #047857;
+}
+
+.app__footer {
+    margin-top: 2rem;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        background-color: #111827;
+        color: #f9fafb;
+    }
+
+    body {
+        background: radial-gradient(circle at top, #1f2937, #0f172a 70%);
+    }
+
+    .app {
+        background-color: rgba(17, 24, 39, 0.8);
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.4);
+    }
+
+    .tone-row {
+        background-color: rgba(30, 41, 59, 0.8);
+        border-color: rgba(148, 163, 184, 0.25);
+    }
+
+    .effects {
+        background-color: rgba(49, 46, 129, 0.35);
+        border-color: rgba(129, 140, 248, 0.4);
+    }
+
+    .effects h2 {
+        color: #c7d2fe;
+    }
+
+    .effect-toggle {
+        color: #ede9fe;
+    }
+
+    .effect-control {
+        color: #c4b5fd;
+    }
+
+    .effect-value {
+        color: #a5b4fc;
+    }
+
+    .tone-row input,
+    .tone-row select {
+        background-color: rgba(15, 23, 42, 0.9);
+        border-color: rgba(148, 163, 184, 0.3);
+        color: inherit;
+    }
+
+    .controls button.btn--secondary {
+        color: #a5b4fc;
+        border-color: rgba(129, 140, 248, 0.6);
+    }
+}

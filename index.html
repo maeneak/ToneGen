@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToneGen &mdash; Multi-Tone Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <main class="app">
+        <header class="app__header">
+            <h1>Multi-Tone Generator</h1>
+            <p>Create a sequence of tones, audition them in your browser, and export the result as a WAV file.</p>
+        </header>
+
+        <section class="controls" aria-label="Tone configuration">
+            <div class="tone-list" id="toneList"></div>
+            <button class="btn btn--secondary" id="addTone" type="button">+ Add Tone</button>
+        </section>
+
+        <section class="effects" aria-label="Audio effects">
+            <h2>Effects</h2>
+            <div class="effect-row">
+                <label class="effect-toggle">
+                    <input type="checkbox" id="reverbToggle" checked>
+                    Enable Reverb
+                </label>
+                <label class="effect-control" for="reverbMix">
+                    Reverb Mix
+                    <span class="effect-value" id="reverbMixValue">35%</span>
+                    <input type="range" id="reverbMix" min="0" max="100" value="35" />
+                </label>
+            </div>
+        </section>
+
+        <section class="actions" aria-label="Playback and export">
+            <button class="btn" id="playButton" type="button">Play Sample</button>
+            <button class="btn" id="downloadButton" type="button">Download WAV</button>
+        </section>
+
+        <section class="status" aria-live="polite">
+            <p id="statusMessage" role="status"></p>
+        </section>
+
+        <footer class="app__footer">
+            <p>Built with the Web Audio API.</p>
+        </footer>
+    </main>
+
+    <script defer src="main.js"></script>
+</body>
+</html>
